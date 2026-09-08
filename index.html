@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Dashboard</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --good:           #0ca30c;
+    --critical:       #d03b3b;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+    --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+    --other: #898781;
+  }
+  @media (prefers-color-scheme: dark) {
+    .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --good:           #0ca30c;
+      --critical:       #e66767;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+      --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--page); color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--text-secondary); font-size: 13px; margin: 0 0 18px; }
+
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-secondary); margin: 0 0 12px; font-weight: 600; }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .toolbar select, .toolbar input, .toolbar button {
+    font-size: 13px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-primary);
+  }
+  .toolbar button { cursor: pointer; }
+  .toolbar .spacer { flex: 1; }
+  #gear { cursor: pointer; background: none; border: none; font-size: 16px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .tile .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em; }
+  .tile .value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .tile .delta { font-size: 12px; margin-top: 4px; }
+  .up { color: var(--critical); }
+  .down { color: var(--good); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 10px; font-size: 12px; color: var(--text-secondary); }
+  .legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; height: 26px; margin-bottom: 6px; font-size: 12px; }
+  .bar-label { width: 110px; flex-shrink: 0; text-align: right; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { flex: 1; position: relative; height: 14px; }
+  .bar-fill { position: absolute; left: 0; top: 0; height: 14px; border-radius: 4px; }
+  .bar-value { margin-left: 8px; width: 70px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  svg text { font-family: system-ui, sans-serif; fill: var(--text-muted); font-size: 10px; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .axis { stroke: var(--baseline); stroke-width: 1; }
+  .trend-line { fill: none; stroke: var(--s1); stroke-width: 2; }
+  .trend-dot { fill: var(--s1); }
+  .hover-line { stroke: var(--baseline); stroke-width: 1; stroke-dasharray: 3 3; }
+
+  #tooltip {
+    position: absolute; pointer-events: none; background: var(--text-primary); color: var(--surface-1);
+    font-size: 11px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity .1s;
+    transform: translate(-50%, -110%);
+  }
+  .chart-wrap { position: relative; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  td.amount { text-align: right; font-variant-numeric: tabular-nums; }
+  .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .table-scroll { overflow-x: auto; }
+
+  #settingsPanel { display: none; }
+  #settingsPanel label { display: block; font-size: 11px; color: var(--text-secondary); margin: 10px 0 4px; }
+  #settingsPanel input { width: 100%; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); }
+  #settingsPanel button { margin-top: 12px; padding: 8px 14px; border-radius: 8px; border: none; background: var(--s1); color: white; cursor: pointer; }
+
+  #status { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+  .empty { color: var(--text-muted); font-size: 13px; padding: 20px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <div class="wrap">
+    <div class="toolbar">
+      <div>
+        <h1 style="margin:0">Expense Dashboard</h1>
+        <p class="sub" style="margin:2px 0 0">Live from your Google Sheet</p>
+      </div>
+      <div class="spacer"></div>
+      <select id="monthSelect"></select>
+      <button id="refreshBtn">Refresh</button>
+      <button id="gear" title="Settings">⚙</button>
+    </div>
+
+    <div id="settingsPanel" class="card">
+      <h2>Settings</h2>
+      <label for="scriptUrl">Apps Script Web App URL</label>
+      <input id="scriptUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec">
+      <label for="token">Secret token</label>
+      <input id="token" type="text" placeholder="same value as SECRET_TOKEN in Code.gs">
+      <button id="saveSettings">Save & load data</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="content" style="display:none">
+
+      <div class="tiles" style="margin-bottom:16px">
+        <div class="tile"><div class="label">Selected month</div><div class="value" id="tileMonth">–</div></div>
+        <div class="tile"><div class="label">Previous month</div><div class="value" id="tilePrev">–</div></div>
+        <div class="tile"><div class="label">Change</div><div class="value delta" id="tileDelta">–</div></div>
+        <div class="tile"><div class="label">All-time total</div><div class="value" id="tileAll">–</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Spend by category — <span id="catMonthLabel"></span></h2>
+        <div id="catBars"></div>
+        <div class="legend" id="catLegend"></div>
+      </div>
+
+      <div class="card">
+        <h2>Daily trend — <span id="trendMonthLabel"></span></h2>
+        <div class="chart-wrap">
+          <svg id="trendSvg" viewBox="0 0 640 200" width="100%" height="200"></svg>
+          <div id="tooltip"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>This month vs previous month</h2>
+        <div class="table-scroll">
+          <table id="compareTable">
+            <thead><tr><th>Category</th><th style="text-align:right">This month</th><th style="text-align:right">Previous</th><th style="text-align:right">Change</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Transactions</h2>
+        <div class="toolbar" style="margin-bottom:10px">
+          <select id="filterCategory"><option value="">All categories</option></select>
+          <select id="filterRange">
+            <option value="all">All time</option>
+            <option value="month" selected>Selected month</option>
+            <option value="30d">Last 30 days</option>
+          </select>
+          <input id="filterSearch" type="text" placeholder="Search tag…">
+        </div>
+        <div class="table-scroll">
+          <table id="txTable">
+            <thead><tr><th>Date</th><th>Category</th><th>Tag</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const PALETTE = ['s1','s2','s3','s4','s5','s6','s7','s8'];
+const els = {
+  gear: document.getElementById('gear'),
+  settingsPanel: document.getElementById('settingsPanel'),
+  scriptUrl: document.getElementById('scriptUrl'),
+  token: document.getElementById('token'),
+  saveSettings: document.getElementById('saveSettings'),
+  status: document.getElementById('status'),
+  content: document.getElementById('content'),
+  monthSelect: document.getElementById('monthSelect'),
+  refreshBtn: document.getElementById('refreshBtn'),
+};
+
+let allRows = [];
+let categoryColor = {}; // category name -> css var name
+
+function css(varName) { return getComputedStyle(document.querySelector('.viz-root')).getPropertyValue('--' + varName).trim(); }
+function fmt(n) { return '₹' + (Math.round(n * 100) / 100).toLocaleString('en-IN'); }
+function monthKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function monthLabel(key) {
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function loadSettings() {
+  const scriptUrl = localStorage.getItem('et_scriptUrl') || '';
+  const token = localStorage.getItem('et_token') || '';
+  els.scriptUrl.value = scriptUrl;
+  els.token.value = token;
+  if (scriptUrl && token) {
+    fetchData(scriptUrl, token);
+  } else {
+    showSettings();
+  }
+}
+
+function showSettings() { els.settingsPanel.style.display = 'block'; }
+function hideSettings() { els.settingsPanel.style.display = 'none'; }
+
+els.gear.addEventListener('click', () => {
+  els.settingsPanel.style.display = els.settingsPanel.style.display === 'block' ? 'none' : 'block';
+});
+
+els.saveSettings.addEventListener('click', () => {
+  const scriptUrl = els.scriptUrl.value.trim();
+  const token = els.token.value.trim();
+  if (!scriptUrl || !token) { els.status.textContent = 'Enter both fields.'; return; }
+  localStorage.setItem('et_scriptUrl', scriptUrl);
+  localStorage.setItem('et_token', token);
+  fetchData(scriptUrl, token);
+});
+
+els.refreshBtn.addEventListener('click', () => {
+  const scriptUrl = localStorage.getItem('et_scriptUrl');
+  const token = localStorage.getItem('et_token');
+  if (scriptUrl && token) fetchData(scriptUrl, token);
+});
+
+let jsonpCounter = 0;
+function fetchData(scriptUrl, token) {
+  els.status.textContent = 'Loading…';
+  els.content.style.display = 'none';
+  const cbName = 'et_cb_' + (jsonpCounter++);
+  const script = document.createElement('script');
+  const timeout = setTimeout(() => {
+    els.status.textContent = 'Timed out — check the URL and your internet connection.';
+    cleanup();
+  }, 12000);
+
+  function cleanup() {
+    clearTimeout(timeout);
+    delete window[cbName];
+    script.remove();
+  }
+
+  window[cbName] = function (data) {
+    cleanup();
+    if (data.status !== 'ok') {
+      els.status.textContent = 'Error: ' + (data.message || 'unknown') + (data.message === 'bad token' ? ' — check your secret token.' : '');
+      return;
+    }
+    els.status.textContent = '';
+    hideSettings();
+    allRows = data.rows.map(r => ({ ...r, dateObj: new Date(r.date) })).sort((a, b) => a.dateObj - b.dateObj);
+    assignCategoryColors();
+    buildMonthSelector();
+    els.content.style.display = 'block';
+    render();
+  };
+
+  const url = scriptUrl + (scriptUrl.includes('?') ? '&' : '?') +
+    'action=data&token=' + encodeURIComponent(token) + '&callback=' + cbName;
+  script.src = url;
+  script.onerror = () => { els.status.textContent = 'Could not reach the script URL.'; cleanup(); };
+  document.body.appendChild(script);
+}
+
+function assignCategoryColors() {
+  categoryColor = {};
+  let slot = 0;
+  allRows.forEach(r => {
+    const cat = r.category || 'Uncategorized';
+    if (cat.toLowerCase() === 'other' || categoryColor[cat]) return;
+    if (slot < PALETTE.length) { categoryColor[cat] = PALETTE[slot]; slot++; }
+    else categoryColor[cat] = 'other';
+  });
+  if (!categoryColor['Other']) categoryColor['Other'] = 'other';
+}
+function colorFor(cat) { return 'var(--' + (categoryColor[cat] || 'other') + ')'; }
+
+function buildMonthSelector() {
+  const months = [...new Set(allRows.map(r => monthKey(r.dateObj)))].sort().reverse();
+  const current = monthKey(new Date());
+  if (!months.includes(current)) months.unshift(current);
+  els.monthSelect.innerHTML = months.map(m => `<option value="${m}">${monthLabel(m)}</option>`).join('');
+  els.monthSelect.value = months.includes(current) ? current : months[0];
+}
+els.monthSelect.addEventListener('change', render);
+
+function totalsByCategory(monthK) {
+  const map = {};
+  allRows.filter(r => monthKey(r.dateObj) === monthK).forEach(r => {
+    const cat = r.category || 'Uncategorized';
+    map[cat] = (map[cat] || 0) + r.amount;
+  });
+  return map;
+}
+function prevMonthKey(monthK) {
+  const [y, m] = monthK.split('-').map(Number);
+  const d = new Date(y, m - 2, 1);
+  return monthKey(d);
+}
+
+function render() {
+  const monthK = els.monthSelect.value;
+  const prevK = prevMonthKey(monthK);
+  const thisTotals = totalsByCategory(monthK);
+  const prevTotals = totalsByCategory(prevK);
+  const thisSum = Object.values(thisTotals).reduce((a, b) => a + b, 0);
+  const prevSum = Object.values(prevTotals).reduce((a, b) => a + b, 0);
+  const allSum = allRows.reduce((a, r) => a + r.amount, 0);
+
+  document.getElementById('tileMonth').textContent = fmt(thisSum);
+  document.getElementById('tilePrev').textContent = fmt(prevSum);
+  document.getElementById('tileAll').textContent = fmt(allSum);
+  const deltaEl = document.getElementById('tileDelta');
+  if (prevSum > 0) {
+    const pct = ((thisSum - prevSum) / prevSum) * 100;
+    deltaEl.textContent = (pct >= 0 ? '▲ ' : '▼ ') + Math.abs(pct).toFixed(1) + '%';
+    deltaEl.className = 'value delta ' + (pct >= 0 ? 'up' : 'down');
+  } else {
+    deltaEl.textContent = '–'; deltaEl.className = 'value delta';
+  }
+
+  document.getElementById('catMonthLabel').textContent = monthLabel(monthK);
+  document.getElementById('trendMonthLabel').textContent = monthLabel(monthK);
+
+  renderCategoryBars(thisTotals);
+  renderTrend(monthK);
+  renderCompareTable(thisTotals, prevTotals);
+  populateCategoryFilter();
+  renderTransactions();
+}
+
+function renderCategoryBars(totals) {
+  const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  const container = document.getElementById('catBars');
+  const legend = document.getElementById('catLegend');
+  if (!entries.length) { container.innerHTML = '<div class="empty">No expenses this month.</div>'; legend.innerHTML = ''; return; }
+  const max = Math.max(...entries.map(e => e[1]));
+  container.innerHTML = entries.map(([cat, amt]) => `
+    <div class="bar-row">
+      <div class="bar-label">${cat}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(amt / max * 100).toFixed(1)}%; background:${colorFor(cat)}"></div></div>
+      <div class="bar-value">${fmt(amt)}</div>
+    </div>`).join('');
+  legend.innerHTML = entries.map(([cat]) =>
+    `<span><span class="dot" style="background:${colorFor(cat)}"></span>${cat}</span>`).join('');
+}
+
+function renderTrend(monthK) {
+  const [y, m] = monthK.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const isCurrentMonth = monthK === monthKey(new Date());
+  const upTo = isCurrentMonth ? new Date().getDate() : daysInMonth;
+  const daily = new Array(daysInMonth + 1).fill(0);
+  allRows.filter(r => monthKey(r.dateObj) === monthK).forEach(r => { daily[r.dateObj.getDate()] += r.amount; });
+
+  const svg = document.getElementById('trendSvg');
+  const W = 640, H = 200, padL = 40, padR = 10, padT = 10, padB = 24;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const max = Math.max(...daily.slice(1, upTo + 1), 1);
+
+  const points = [];
+  for (let d = 1; d <= upTo; d++) {
+    const x = padL + ((d - 1) / Math.max(upTo - 1, 1)) * plotW;
+    const y2 = padT + plotH - (daily[d] / max) * plotH;
+    points.push([x, y2, d, daily[d]]);
+  }
+
+  let gridLines = '';
+  for (let i = 0; i <= 3; i++) {
+    const gy = padT + (plotH / 3) * i;
+    gridLines += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}"/>`;
+  }
+  let axisLabels = '';
+  for (let d = 1; d <= upTo; d += Math.ceil(upTo / 6)) {
+    const x = padL + ((d - 1) / Math.max(upTo - 1, 1)) * plotW;
+    axisLabels += `<text x="${x}" y="${H - 6}" text-anchor="middle">${d}</text>`;
+  }
+
+  const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+
+  svg.innerHTML = `
+    ${gridLines}
+    <line class="axis" x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}"/>
+    <path class="trend-line" d="${path}"/>
+    ${axisLabels}
+    <rect id="hoverCatcher" x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="transparent"/>
+    <line id="hoverLine" class="hover-line" x1="0" y1="${padT}" x2="0" y2="${padT + plotH}" style="display:none"/>
+    <circle id="hoverDot" class="trend-dot" r="4" style="display:none"/>
+  `;
+
+  const catcher = document.getElementById('hoverCatcher');
+  const hoverLine = document.getElementById('hoverLine');
+  const hoverDot = document.getElementById('hoverDot');
+  const tooltip = document.getElementById('tooltip');
+
+  catcher.addEventListener('mousemove', (evt) => {
+    const rect = svg.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const mx = (evt.clientX - rect.left) * scaleX;
+    let nearest = points[0];
+    for (const p of points) if (Math.abs(p[0] - mx) < Math.abs(nearest[0] - mx)) nearest = p;
+    hoverLine.setAttribute('x1', nearest[0]); hoverLine.setAttribute('x2', nearest[0]); hoverLine.style.display = '';
+    hoverDot.setAttribute('cx', nearest[0]); hoverDot.setAttribute('cy', nearest[1]); hoverDot.style.display = '';
+    const wrapRect = svg.parentElement.getBoundingClientRect();
+    tooltip.style.left = ((nearest[0] / W) * rect.width) + 'px';
+    tooltip.style.top = ((nearest[1] / H) * rect.height) + 'px';
+    tooltip.textContent = monthLabel(monthK).split(' ')[0] + ' ' + nearest[2] + ' — ' + fmt(nearest[3]);
+    tooltip.style.opacity = '1';
+  });
+  catcher.addEventListener('mouseleave', () => {
+    hoverLine.style.display = 'none'; hoverDot.style.display = 'none'; tooltip.style.opacity = '0';
+  });
+}
+
+function renderCompareTable(thisTotals, prevTotals) {
+  const cats = [...new Set([...Object.keys(thisTotals), ...Object.keys(prevTotals)])]
+    .sort((a, b) => (thisTotals[b] || 0) - (thisTotals[a] || 0));
+  const tbody = document.querySelector('#compareTable tbody');
+  if (!cats.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No data.</td></tr>'; return; }
+  tbody.innerHTML = cats.map(cat => {
+    const cur = thisTotals[cat] || 0, prev = prevTotals[cat] || 0;
+    let deltaTxt = '–', cls = '';
+    if (prev > 0) {
+      const pct = ((cur - prev) / prev) * 100;
+      deltaTxt = (pct >= 0 ? '▲ ' : '▼ ') + Math.abs(pct).toFixed(0) + '%';
+      cls = pct >= 0 ? 'up' : 'down';
+    } else if (cur > 0) { deltaTxt = 'new'; }
+    return `<tr>
+      <td><span class="cat-dot" style="background:${colorFor(cat)}"></span>${cat}</td>
+      <td class="amount">${fmt(cur)}</td>
+      <td class="amount">${fmt(prev)}</td>
+      <td class="amount ${cls}">${deltaTxt}</td>
+    </tr>`;
+  }).join('');
+}
+
+function populateCategoryFilter() {
+  const sel = document.getElementById('filterCategory');
+  const current = sel.value;
+  const cats = [...new Set(allRows.map(r => r.category || 'Uncategorized'))].sort();
+  sel.innerHTML = '<option value="">All categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = current;
+}
+
+['filterCategory', 'filterRange', 'filterSearch'].forEach(id =>
+  document.getElementById(id).addEventListener('input', renderTransactions));
+
+function renderTransactions() {
+  const cat = document.getElementById('filterCategory').value;
+  const range = document.getElementById('filterRange').value;
+  const search = document.getElementById('filterSearch').value.trim().toLowerCase();
+  const monthK = els.monthSelect.value;
+  const now = new Date();
+  const cutoff30 = new Date(now); cutoff30.setDate(cutoff30.getDate() - 30);
+
+  let rows = [...allRows].reverse();
+  if (cat) rows = rows.filter(r => (r.category || 'Uncategorized') === cat);
+  if (range === 'month') rows = rows.filter(r => monthKey(r.dateObj) === monthK);
+  else if (range === '30d') rows = rows.filter(r => r.dateObj >= cutoff30);
+  if (search) rows = rows.filter(r => (r.tag || '').toLowerCase().includes(search) || (r.category || '').toLowerCase().includes(search));
+
+  const tbody = document.querySelector('#txTable tbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No transactions match.</td></tr>'; return; }
+  tbody.innerHTML = rows.slice(0, 300).map(r => `
+    <tr>
+      <td>${r.dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+      <td><span class="cat-dot" style="background:${colorFor(r.category || 'Uncategorized')}"></span>${r.category || 'Uncategorized'}</td>
+      <td>${r.tag || ''}</td>
+      <td class="amount">${fmt(r.amount)}</td>
+    </tr>`).join('');
+}
+
+loadSettings();
+</script>
+</body>
+</html>
