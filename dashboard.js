@@ -297,6 +297,10 @@ export async function initDashboard(token, sheetId) {
   document.getElementById('dashboard').style.display = 'block';
 }
 
+export function getCategories() {
+  return Object.keys(budgets);
+}
+
 export async function refreshDashboard() {
   document.getElementById('dashStatus').textContent = 'Refreshing…';
   await loadAll();

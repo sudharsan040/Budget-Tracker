@@ -25,5 +25,10 @@ export const GOOGLE_SCOPES = "https://www.googleapis.com/auth/drive.file https:/
 
 export const SPREADSHEET_NAME = "Budget Tracker Data";
 
+export const DEFAULT_CATEGORIES = [
+  'Food', 'Groceries', 'Transport', 'Rent', 'Utilities',
+  'Entertainment', 'Shopping', 'Health', 'Other'
+];
+
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

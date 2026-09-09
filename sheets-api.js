@@ -2,7 +2,7 @@
 // Services (GIS), and finding-or-creating each user's personal spreadsheet.
 // No backend — every call here goes straight from the browser to Google's APIs.
 
-import { GOOGLE_OAUTH_CLIENT_ID, GOOGLE_SCOPES, SPREADSHEET_NAME } from './firebase-config.js';
+import { GOOGLE_OAUTH_CLIENT_ID, GOOGLE_SCOPES, SPREADSHEET_NAME, DEFAULT_CATEGORIES } from './firebase-config.js';
 
 let tokenClient = null;
 let currentToken = null; // { access_token, expiresAt }
@@ -96,6 +96,9 @@ export async function ensureSpreadsheet(token, uid) {
       data: [
         { range: 'Expenses!A1:E1', values: [['Date', 'Amount', 'Category', 'Tag/Note', 'Source']] },
         { range: 'Budgets!A1:B1', values: [['Category', 'Monthly Limit']] },
+        // Seed with sensible defaults so the "Add expense" form and Settings
+        // page aren't empty on a brand-new sheet. Blank limit = no budget set.
+        { range: 'Budgets!A2:B' + (DEFAULT_CATEGORIES.length + 1), values: DEFAULT_CATEGORIES.map(c => [c, '']) },
       ],
     }),
   }, token);
@@ -106,4 +109,41 @@ export async function ensureSpreadsheet(token, uid) {
 
 export function spreadsheetUrl(id) {
   return `https://docs.google.com/spreadsheets/d/${id}/edit`;
+}
+
+// Appends one row to Expenses (entry method #1: directly in the app).
+export async function appendExpense(token, spreadsheetId, { date, amount, category, tag, source }) {
+  await sheetsApi(
+    `/${spreadsheetId}/values/Expenses!A:E:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    { method: 'POST', body: JSON.stringify({ values: [[date, amount, category, tag || '', source || 'web-app']] }) },
+    token
+  );
+}
+
+// Categories live in the Budgets tab (Category | Monthly Limit) — a
+// category with a blank limit simply has no budget set yet.
+export async function readCategories(token, spreadsheetId) {
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Budgets!A2:B1000`,
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
+  if (!res.ok) throw new Error('Could not read categories: ' + res.status);
+  const data = await res.json();
+  return (data.values || []).filter(r => r[0]).map(r => ({ category: r[0], limit: r[1] || '' }));
+}
+
+// Replaces the whole category/budget list (clear then rewrite) so deletes
+// and reorders in Settings are reflected cleanly.
+export async function writeCategories(token, spreadsheetId, rows) {
+  await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Budgets!A2:B1000:clear`,
+    { method: 'POST', headers: { Authorization: 'Bearer ' + token } }
+  );
+  if (!rows.length) return;
+  const values = rows.map(r => [r.category, r.limit === '' || r.limit == null ? '' : r.limit]);
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Budgets!A2:B${rows.length + 1}?valueInputOption=RAW`,
+    { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ values }) }
+  );
+  if (!res.ok) throw new Error('Could not save categories: ' + res.status);
 }
