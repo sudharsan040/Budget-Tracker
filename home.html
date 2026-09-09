@@ -9,56 +9,184 @@
     color-scheme: light;
     --surface-1: #fcfcfb; --page: #f9f9f7;
     --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
-    --border: rgba(11,11,11,0.10); --s1: #2a78d6;
+    --gridline: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+    --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948; --other: #898781;
+    --status-good: #0ca30c; --status-warning: #fab219; --status-critical: #d03b3b;
+    --up: #d03b3b; --down: #0ca30c;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
       --surface-1: #1a1a19; --page: #0d0d0d;
       --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
-      --border: rgba(255,255,255,0.10); --s1: #3987e5;
+      --gridline: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+      --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+      --status-critical: #e66767; --up: #e66767;
     }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--page); color: var(--text-primary); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface-1); }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface-1); position: sticky; top: 0; z-index: 5; }
   .topbar strong { font-size: 15px; }
-  .topbar .who { font-size: 12px; color: var(--text-secondary); }
+  .topbar nav { display: flex; gap: 14px; margin-left: 20px; }
+  .topbar nav a { color: var(--text-secondary); text-decoration: none; font-size: 13px; }
+  .topbar nav a.active { color: var(--text-primary); font-weight: 600; }
+  .who { font-size: 12px; color: var(--text-secondary); }
   #signOut { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
-  .wrap { max-width: 640px; margin: 40px auto; padding: 0 16px; text-align: center; }
-  .placeholder { border: 1px dashed var(--border); border-radius: 12px; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
-  .connectBox { border: 1px solid var(--border); border-radius: 12px; padding: 28px 20px; background: var(--surface-1); }
-  .connectBox p { color: var(--text-secondary); font-size: 13px; margin: 6px 0 18px; }
-  #connectBtn, #openSheet {
-    display: inline-block; padding: 10px 18px; border-radius: 8px; border: none;
-    background: var(--s1); color: white; font-size: 14px; cursor: pointer; text-decoration: none;
+
+  .wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .connectBox { border: 1px solid var(--border); border-radius: 12px; padding: 24px 20px; background: var(--surface-1); text-align: center; margin-bottom: 16px; }
+  .connectBox p { color: var(--text-secondary); font-size: 13px; margin: 6px 0 16px; }
+  #connectBtn { padding: 10px 18px; border-radius: 8px; border: none; background: var(--s1); color: white; font-size: 14px; cursor: pointer; }
+  .connected-line { font-size: 12px; color: var(--text-secondary); text-align: right; margin-bottom: 10px; }
+  .connected-line a { color: var(--s1); }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .toolbar select, .toolbar input, .toolbar button {
+    font-size: 13px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-primary);
   }
-  #connectStatus { font-size: 13px; color: var(--text-secondary); margin-top: 12px; min-height: 18px; }
-  .ok { color: var(--s1); }
+  .toolbar button { cursor: pointer; }
+  .toolbar .spacer { flex: 1; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); margin: 0 0 12px; font-weight: 600; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .tile .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em; }
+  .tile .value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .up { color: var(--up); } .down { color: var(--down); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 10px; font-size: 12px; color: var(--text-secondary); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; height: 26px; margin-bottom: 6px; font-size: 12px; }
+  .bar-label { width: 110px; flex-shrink: 0; text-align: right; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { flex: 1; position: relative; height: 14px; background: var(--gridline); border-radius: 4px; overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; height: 14px; border-radius: 4px; }
+  .bar-value { margin-left: 8px; width: 70px; font-variant-numeric: tabular-nums; }
+
+  .budget-row { margin-bottom: 14px; }
+  .budget-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+  .budget-amt { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+  .status-label { font-size: 11px; margin-top: 4px; }
+  .status-good { color: var(--status-good); }
+  .status-warning { color: var(--status-warning); }
+  .status-critical { color: var(--status-critical); }
+
+  svg text { font-family: system-ui, sans-serif; fill: var(--text-muted); font-size: 10px; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .axis { stroke: var(--baseline); stroke-width: 1; }
+  .trend-line { fill: none; stroke: var(--s1); stroke-width: 2; }
+  .trend-dot { fill: var(--s1); }
+  .hover-line { stroke: var(--baseline); stroke-width: 1; stroke-dasharray: 3 3; }
+  #tooltip {
+    position: absolute; pointer-events: none; background: var(--text-primary); color: var(--surface-1);
+    font-size: 11px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity .1s;
+    transform: translate(-50%, -110%);
+  }
+  .chart-wrap { position: relative; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  td.amount { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-scroll { overflow-x: auto; }
+  .empty { color: var(--text-muted); font-size: 13px; padding: 20px 0; text-align: center; }
+  #dashStatus { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
 </style>
 </head>
 <body>
   <div class="topbar">
-    <strong>Budget Tracker</strong>
+    <div style="display:flex; align-items:center">
+      <strong>Budget Tracker</strong>
+      <nav>
+        <a href="home.html" class="active">Home</a>
+        <a href="settings.html">Settings</a>
+      </nav>
+    </div>
     <div style="display:flex; align-items:center; gap:12px">
       <span class="who" id="who"></span>
       <button id="signOut">Sign out</button>
     </div>
   </div>
+
   <div class="wrap">
     <div class="connectBox" id="connectBox">
-      <div id="preConnect">
-        <p>Connect your Google account to create your private spending sheet — you only need to do this once.</p>
-        <button id="connectBtn">Connect Google Sheets</button>
-      </div>
-      <div id="postConnect" style="display:none">
-        <p>You're all set — your data lives in your own Google Sheet.</p>
-        <a id="openSheet" target="_blank" rel="noopener">Open my sheet</a>
-      </div>
-      <div id="connectStatus"></div>
+      <p>Connect your Google account to create your private spending sheet — you only need to do this once.</p>
+      <button id="connectBtn">Connect Google Sheets</button>
     </div>
-    <div class="placeholder" style="margin-top:16px">
-      Real stats, budgets, and the in-app expense form land here in Phase 3–5.
+    <div class="connected-line" id="connectedLine" style="display:none">
+      Connected · <a id="openSheet" target="_blank" rel="noopener">Open my sheet</a>
+    </div>
+
+    <div id="dashStatus"></div>
+
+    <div id="dashboard" style="display:none">
+      <div class="toolbar">
+        <div class="spacer"></div>
+        <select id="monthSelect"></select>
+        <button id="refreshBtn">Refresh</button>
+      </div>
+
+      <div class="tiles">
+        <div class="tile"><div class="label">Selected month</div><div class="value" id="tileMonth">–</div></div>
+        <div class="tile"><div class="label">Previous month</div><div class="value" id="tilePrev">–</div></div>
+        <div class="tile"><div class="label">Change</div><div class="value" id="tileDelta">–</div></div>
+        <div class="tile"><div class="label">All-time total</div><div class="value" id="tileAll">–</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Budget progress — <span id="budgetMonthLabel"></span></h2>
+        <div id="budgetBars"></div>
+      </div>
+
+      <div class="card">
+        <h2>Spend by category — <span id="catMonthLabel"></span></h2>
+        <div id="catBars"></div>
+        <div class="legend" id="catLegend"></div>
+      </div>
+
+      <div class="card">
+        <h2>Daily trend — <span id="trendMonthLabel"></span></h2>
+        <div class="chart-wrap">
+          <svg id="trendSvg" viewBox="0 0 640 200" width="100%" height="200"></svg>
+          <div id="tooltip"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>This month vs previous month</h2>
+        <div class="table-scroll">
+          <table id="compareTable">
+            <thead><tr><th>Category</th><th style="text-align:right">This month</th><th style="text-align:right">Previous</th><th style="text-align:right">Change</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Transactions</h2>
+        <div class="toolbar" style="margin-bottom:10px">
+          <select id="filterCategory"><option value="">All categories</option></select>
+          <select id="filterRange">
+            <option value="all">All time</option>
+            <option value="month" selected>Selected month</option>
+            <option value="30d">Last 30 days</option>
+          </select>
+          <input id="filterSearch" type="text" placeholder="Search tag…">
+        </div>
+        <div class="table-scroll">
+          <table id="txTable">
+            <thead><tr><th>Date</th><th>Category</th><th>Tag</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -67,11 +195,11 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth } from "./firebase-config.js";
 import { getAccessToken, ensureSpreadsheet, spreadsheetUrl } from "./sheets-api.js";
+import { initDashboard, refreshDashboard } from "./dashboard.js";
 
-const statusEl = document.getElementById('connectStatus');
-const preConnect = document.getElementById('preConnect');
-const postConnect = document.getElementById('postConnect');
 let currentUid = null;
+let currentToken = null;
+let currentSheetId = null;
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = 'index.html'; return; }
@@ -79,28 +207,50 @@ onAuthStateChanged(auth, async (user) => {
   currentUid = user.uid;
 
   const cached = localStorage.getItem('bt_spreadsheetId_' + user.uid);
-  if (cached) showConnected(cached);
+  if (cached) {
+    currentSheetId = cached;
+    showConnected(cached);
+    try {
+      currentToken = await getAccessToken({ interactive: false });
+      await initDashboard(currentToken, currentSheetId);
+    } catch {
+      // Silent token refresh failed (first visit this session) — user can
+      // click Connect again if needed; the button below is always available.
+      document.getElementById('dashStatus').textContent = 'Click "Connect Google Sheets" to load your data.';
+      document.getElementById('connectBox').style.display = 'block';
+    }
+  }
 });
 
 document.getElementById('signOut').addEventListener('click', () => signOut(auth));
 
 document.getElementById('connectBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('dashStatus');
   statusEl.textContent = 'Opening Google’s permission screen…';
-  statusEl.className = '';
   try {
-    const token = await getAccessToken();
+    currentToken = await getAccessToken();
     statusEl.textContent = 'Setting up your spreadsheet…';
-    const id = await ensureSpreadsheet(token, currentUid);
-    showConnected(id);
+    currentSheetId = await ensureSpreadsheet(currentToken, currentUid);
+    showConnected(currentSheetId);
+    await initDashboard(currentToken, currentSheetId);
     statusEl.textContent = '';
   } catch (e) {
     statusEl.textContent = e.message || 'Something went wrong connecting Google Sheets.';
   }
 });
 
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  try {
+    currentToken = await getAccessToken({ interactive: false });
+    await refreshDashboard();
+  } catch (e) {
+    document.getElementById('dashStatus').textContent = 'Could not refresh — try reconnecting.';
+  }
+});
+
 function showConnected(spreadsheetId) {
-  preConnect.style.display = 'none';
-  postConnect.style.display = 'block';
+  document.getElementById('connectBox').style.display = 'none';
+  document.getElementById('connectedLine').style.display = 'block';
   document.getElementById('openSheet').href = spreadsheetUrl(spreadsheetId);
 }
 </script>
