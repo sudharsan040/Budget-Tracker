@@ -165,6 +165,57 @@ export async function deleteExpenseRow(token, spreadsheetId, rowNumber) {
   }, token);
 }
 
+// Recurring expenses (rent, subscriptions, etc). Stored in their own tab,
+// which may not exist on spreadsheets created before this feature — created
+// on demand the first time something is written there.
+export async function readRecurring(token, spreadsheetId) {
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Recurring!A2:D1000`,
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
+  if (!res.ok) return []; // tab doesn't exist yet on older sheets — no recurring items
+  const data = await res.json();
+  return (data.values || []).filter(r => r[0]).map(r => ({
+    category: r[0], amount: Number(r[1]) || 0, tag: r[2] || '', day: Number(r[3]) || 1,
+  }));
+}
+
+async function ensureRecurringSheet(token, spreadsheetId) {
+  const meta = await sheetsApi(`/${spreadsheetId}?fields=sheets.properties`, {}, token);
+  if (meta.sheets.some(s => s.properties.title === 'Recurring')) return;
+  await sheetsApi(`/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Recurring' } } }] }),
+  }, token);
+  await sheetsApi(`/${spreadsheetId}/values/Recurring!A1:D1?valueInputOption=RAW`, {
+    method: 'PUT', body: JSON.stringify({ values: [['Category', 'Amount', 'Tag', 'Day of Month']] }),
+  }, token);
+}
+
+export async function writeRecurring(token, spreadsheetId, rows) {
+  await ensureRecurringSheet(token, spreadsheetId);
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Recurring!A2:D1000:clear`, {
+    method: 'POST', headers: { Authorization: 'Bearer ' + token },
+  });
+  if (!rows.length) return;
+  const values = rows.map(r => [r.category, r.amount, r.tag || '', r.day || 1]);
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Recurring!A2:D${rows.length + 1}?valueInputOption=RAW`,
+    { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ values }) }
+  );
+  if (!res.ok) throw new Error('Could not save recurring expenses: ' + res.status);
+}
+
+export async function readValues(token, spreadsheetId, range) {
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`,
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
+  if (!res.ok) throw new Error('Sheets read failed: ' + res.status);
+  const data = await res.json();
+  return data.values || [];
+}
+
 export function spreadsheetUrl(id) {
   return `https://docs.google.com/spreadsheets/d/${id}/edit`;
 }

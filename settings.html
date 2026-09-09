@@ -90,12 +90,26 @@
       </div>
       <div id="settingsStatus"></div>
     </div>
+
+    <div class="card">
+      <h2>Recurring expenses</h2>
+      <p class="hint">Things like rent or subscriptions. On Home, you'll get a reminder to add any of these not yet logged for the current month — nothing is added automatically.</p>
+      <table id="recTable">
+        <thead><tr><th>Category</th><th>Amount (₹)</th><th>Tag</th><th style="width:70px">Day</th><th></th></tr></thead>
+        <tbody id="recBody"></tbody>
+      </table>
+      <div class="btnRow">
+        <button id="addRecBtn">+ Add recurring</button>
+        <button id="saveRecBtn">Save changes</button>
+      </div>
+      <div id="recStatus"></div>
+    </div>
   </div>
 
 <script type="module">
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth } from "./firebase-config.js";
-import { getAccessToken, readCategories, writeCategories, clearAccessTokenCache } from "./sheets-api.js";
+import { getAccessToken, readCategories, writeCategories, readRecurring, writeRecurring, clearAccessTokenCache } from "./sheets-api.js";
 
 const catBody = document.getElementById('catBody');
 const statusEl = document.getElementById('settingsStatus');
@@ -116,12 +130,58 @@ onAuthStateChanged(auth, async (user) => {
     token = await getAccessToken({ interactive: false });
     const rows = await readCategories(token, spreadsheetId);
     renderRows(rows.length ? rows : [{ category: '', limit: '' }]);
+    const recRows = await readRecurring(token, spreadsheetId);
+    renderRecRows(recRows.length ? recRows : [{ category: '', amount: '', tag: '', day: 1 }]);
   } catch (e) {
     statusEl.textContent = 'Could not load categories — go to Home to reconnect, then come back.';
   }
 });
 
 document.getElementById('signOut').addEventListener('click', () => { clearAccessTokenCache(); signOut(auth); });
+
+const recBody = document.getElementById('recBody');
+const recStatus = document.getElementById('recStatus');
+
+function renderRecRows(rows) {
+  recBody.innerHTML = '';
+  rows.forEach(addRecRow);
+}
+
+function addRecRow(row = { category: '', amount: '', tag: '', day: 1 }) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" class="recCat" value="${escapeAttr(row.category)}" placeholder="e.g. Rent"></td>
+    <td><input type="number" step="0.01" class="recAmt" value="${escapeAttr(row.amount)}"></td>
+    <td><input type="text" class="recTag" value="${escapeAttr(row.tag)}" placeholder="optional"></td>
+    <td><input type="number" min="1" max="28" class="recDay" value="${escapeAttr(row.day || 1)}"></td>
+    <td><button class="rmBtn" title="Remove">✕</button></td>
+  `;
+  tr.querySelector('.rmBtn').addEventListener('click', () => tr.remove());
+  recBody.appendChild(tr);
+}
+
+document.getElementById('addRecBtn').addEventListener('click', () => addRecRow());
+
+document.getElementById('saveRecBtn').addEventListener('click', async () => {
+  if (!spreadsheetId) { recStatus.textContent = 'Connect Google Sheets from Home first.'; return; }
+  const rows = [...recBody.querySelectorAll('tr')].map(tr => ({
+    category: tr.querySelector('.recCat').value.trim(),
+    amount: tr.querySelector('.recAmt').value.trim(),
+    tag: tr.querySelector('.recTag').value.trim(),
+    day: Number(tr.querySelector('.recDay').value) || 1,
+  })).filter(r => r.category && r.amount);
+
+  recStatus.textContent = 'Saving…';
+  try {
+    token = await getAccessToken({ interactive: false });
+    await writeRecurring(token, spreadsheetId, rows);
+    renderRecRows(rows.length ? rows : [{ category: '', amount: '', tag: '', day: 1 }]);
+    recStatus.textContent = 'Saved ✓';
+    setTimeout(() => { recStatus.textContent = ''; }, 1500);
+  } catch (e) {
+    recStatus.textContent = e.message || 'Could not save — try again.';
+  }
+});
 
 function renderRows(rows) {
   catBody.innerHTML = '';
