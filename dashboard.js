@@ -4,6 +4,7 @@
 
 const PALETTE = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'];
 let allRows = [];
+let incomeRows = [];
 let budgets = {}; // category -> monthly limit
 let categoryColor = {};
 let spreadsheetId = null;
@@ -29,10 +30,15 @@ async function readValues(range) {
 }
 
 async function loadAll() {
-  const [expenseRows, budgetRows] = await Promise.all([
+  const [expenseRows, budgetRows, incomeValues] = await Promise.all([
     readValues('Expenses!A2:E100000'),
     readValues('Budgets!A2:B1000'),
+    readValues('Income!A2:D100000').catch(() => []), // tab may not exist yet
   ]);
+
+  incomeRows = incomeValues
+    .filter(r => r[0])
+    .map(r => ({ dateObj: new Date(r[0]), amount: Number(r[1]) || 0, source: r[2] || '', note: r[3] || '' }));
 
   allRows = expenseRows
     .map((r, i) => ({ r, rowNumber: i + 2 })) // Expenses!A2 is row 2
@@ -65,6 +71,10 @@ function assignCategoryColors() {
   if (!categoryColor['Other']) categoryColor['Other'] = 'other';
 }
 function colorFor(cat) { return 'var(--' + (categoryColor[cat] || 'other') + ')'; }
+
+function incomeForMonth(monthK) {
+  return incomeRows.filter(r => monthKey(r.dateObj) === monthK).reduce((a, r) => a + r.amount, 0);
+}
 
 function totalsByCategory(monthK) {
   const map = {};
@@ -104,6 +114,13 @@ function render() {
   } else {
     deltaEl.textContent = '–'; deltaEl.className = 'value delta';
   }
+
+  const incomeThisMonth = incomeForMonth(monthK);
+  const netSavings = incomeThisMonth - thisSum;
+  document.getElementById('tileIncome').textContent = fmt(incomeThisMonth);
+  const netEl = document.getElementById('tileNet');
+  netEl.textContent = (netSavings >= 0 ? '+' : '−') + fmt(Math.abs(netSavings)).replace('₹', '₹');
+  netEl.className = 'value delta ' + (netSavings >= 0 ? 'down' : 'up'); // reuse: green=good, red=bad
 
   document.getElementById('catMonthLabel').textContent = monthLabel(monthK);
   document.getElementById('trendMonthLabel').textContent = monthLabel(monthK);

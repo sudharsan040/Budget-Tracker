@@ -206,6 +206,28 @@ export async function writeRecurring(token, spreadsheetId, rows) {
   if (!res.ok) throw new Error('Could not save recurring expenses: ' + res.status);
 }
 
+// Income (salary, freelance, etc) — its own tab, created on demand.
+async function ensureIncomeSheet(token, spreadsheetId) {
+  const meta = await sheetsApi(`/${spreadsheetId}?fields=sheets.properties`, {}, token);
+  if (meta.sheets.some(s => s.properties.title === 'Income')) return;
+  await sheetsApi(`/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Income' } } }] }),
+  }, token);
+  await sheetsApi(`/${spreadsheetId}/values/Income!A1:D1?valueInputOption=RAW`, {
+    method: 'PUT', body: JSON.stringify({ values: [['Date', 'Amount', 'Source', 'Note']] }),
+  }, token);
+}
+
+export async function appendIncome(token, spreadsheetId, { date, amount, source, note }) {
+  await ensureIncomeSheet(token, spreadsheetId);
+  await sheetsApi(
+    `/${spreadsheetId}/values/Income!A:D:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    { method: 'POST', body: JSON.stringify({ values: [[date, amount, source || '', note || '']] }) },
+    token
+  );
+}
+
 export async function readValues(token, spreadsheetId, range) {
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`,
