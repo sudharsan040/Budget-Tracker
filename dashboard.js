@@ -109,6 +109,7 @@ function render() {
   document.getElementById('trendMonthLabel').textContent = monthLabel(monthK);
   document.getElementById('budgetMonthLabel').textContent = monthLabel(monthK);
 
+  renderAlerts(thisTotals);
   renderCategoryBars(thisTotals);
   renderBudgetProgress(thisTotals);
   renderTrend(monthK);
@@ -131,6 +132,20 @@ function renderCategoryBars(totals) {
     </div>`).join('');
   legend.innerHTML = entries.map(([cat]) =>
     `<span><span class="dot" style="background:${colorFor(cat)}"></span>${cat}</span>`).join('');
+}
+
+function renderAlerts(totals) {
+  const banner = document.getElementById('alertBanner');
+  const alerts = [];
+  Object.keys(budgets).filter(c => budgets[c] > 0).forEach(cat => {
+    const spent = totals[cat] || 0;
+    const limit = budgets[cat];
+    if (spent > limit) alerts.push({ cat, cls: 'critical', icon: '✕', text: `<b>${cat}</b> is over budget — ${fmt(spent)} of ${fmt(limit)}` });
+    else if (spent / limit >= 0.8) alerts.push({ cat, cls: 'warning', icon: '⚠', text: `<b>${cat}</b> is nearing its budget — ${fmt(spent)} of ${fmt(limit)}` });
+  });
+  if (!alerts.length) { banner.style.display = 'none'; banner.innerHTML = ''; return; }
+  banner.style.display = 'block';
+  banner.innerHTML = alerts.map(a => `<div class="alertRow ${a.cls}">${a.icon} ${a.text}</div>`).join('');
 }
 
 function renderBudgetProgress(totals) {
@@ -258,7 +273,7 @@ function populateCategoryFilter() {
   sel.value = current;
 }
 
-function renderTransactions() {
+function getFilteredRows() {
   const cat = document.getElementById('filterCategory').value;
   const range = document.getElementById('filterRange').value;
   const search = document.getElementById('filterSearch').value.trim().toLowerCase();
@@ -271,7 +286,11 @@ function renderTransactions() {
   if (range === 'month') rows = rows.filter(r => monthKey(r.dateObj) === monthK);
   else if (range === '30d') rows = rows.filter(r => r.dateObj >= cutoff30);
   if (search) rows = rows.filter(r => r.tag.toLowerCase().includes(search) || r.category.toLowerCase().includes(search));
+  return rows;
+}
 
+function renderTransactions() {
+  const rows = getFilteredRows();
   const tbody = document.querySelector('#txTable tbody');
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No transactions match.</td></tr>'; return; }
   tbody.innerHTML = rows.slice(0, 300).map(r => `
@@ -303,6 +322,31 @@ export async function initDashboard(token, sheetId) {
   render();
   document.getElementById('dashStatus').textContent = '';
   document.getElementById('dashboard').style.display = 'block';
+}
+
+export function exportCSV() {
+  const rows = getFilteredRows();
+  const header = ['Date', 'Amount', 'Category', 'Tag/Note', 'Source'];
+  const lines = [header.join(',')];
+  rows.forEach(r => {
+    const cells = [
+      r.dateObj.toISOString().slice(0, 10),
+      r.amount,
+      r.category,
+      r.tag,
+      r.source,
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`);
+    lines.push(cells.join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `budget-tracker-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function getCategories() {
