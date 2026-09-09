@@ -6,52 +6,57 @@
 <title>Budget Tracker — Sign in</title>
 <style>
   :root {
-    color-scheme: light;
-    --surface-1: #fcfcfb; --page: #f9f9f7;
-    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
-    --border: rgba(11,11,11,0.10); --s1: #2a78d6; --critical: #d03b3b;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --surface-1: #1a1a19; --page: #0d0d0d;
-      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
-      --border: rgba(255,255,255,0.10); --s1: #3987e5; --critical: #e66767;
-    }
+    color-scheme: dark;
+    --page: #000000; --surface-1: #121317; --surface-2: #191b21;
+    --text-primary: #ffffff; --text-secondary: #b7bac5; --text-muted: #7a7e8c;
+    --border: rgba(255,255,255,0.09);
+    --accent: #3b82f6; --accent-hover: #2f6fe0; --accent-glow: rgba(59,130,246,0.35);
+    --s1: #3987e5; --critical: #e66767;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: var(--page); color: var(--text-primary);
+    background:
+      radial-gradient(600px circle at 50% -10%, rgba(59,130,246,0.16), transparent 60%),
+      var(--page);
+    color: var(--text-primary);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   .card {
     width: 320px; background: var(--surface-1); border: 1px solid var(--border);
     border-radius: 14px; padding: 28px 24px;
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.06), 0 24px 60px rgba(0,0,0,0.6);
   }
-  h1 { font-size: 19px; margin: 0 0 4px; text-align: center; }
+  h1 { font-size: 20px; margin: 0 0 4px; text-align: center; letter-spacing: -0.01em; }
   p.sub { color: var(--text-secondary); font-size: 13px; text-align: center; margin: 0 0 22px; }
 
   .google-btn {
     width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
     padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface-1); color: var(--text-primary); font-size: 14px; cursor: pointer;
+    background: var(--surface-2); color: var(--text-primary); font-size: 14px; cursor: pointer;
+    transition: border-color .15s, background .15s;
   }
+  .google-btn:hover { border-color: var(--accent); background: #1d2028; }
   .divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; color: var(--text-muted); font-size: 12px; }
   .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
   label { display: block; font-size: 12px; color: var(--text-secondary); margin: 10px 0 4px; }
   input {
     width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface-1); color: var(--text-primary); font-size: 14px;
+    background: var(--surface-2); color: var(--text-primary); font-size: 14px;
+    transition: border-color .15s, box-shadow .15s;
   }
+  input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
   #primaryBtn {
     width: 100%; margin-top: 16px; padding: 10px; border-radius: 8px; border: none;
-    background: var(--s1); color: white; font-size: 14px; cursor: pointer;
+    background: var(--accent); color: white; font-size: 14px; cursor: pointer;
+    box-shadow: 0 4px 16px var(--accent-glow); transition: background .15s, transform .1s;
   }
-  #primaryBtn:disabled { opacity: .6; cursor: default; }
+  #primaryBtn:hover { background: var(--accent-hover); }
+  #primaryBtn:active { transform: translateY(1px); }
+  #primaryBtn:disabled { opacity: .6; cursor: default; box-shadow: none; }
   .toggle { text-align: center; margin-top: 14px; font-size: 13px; color: var(--text-secondary); }
-  .toggle a { color: var(--s1); cursor: pointer; text-decoration: none; }
+  .toggle a { color: var(--accent); cursor: pointer; text-decoration: none; }
   #err { color: var(--critical); font-size: 12px; text-align: center; min-height: 16px; margin-top: 10px; }
 </style>
 </head>

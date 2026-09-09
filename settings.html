@@ -6,30 +6,27 @@
 <title>Budget Tracker — Settings</title>
 <style>
   :root {
-    color-scheme: light;
-    --surface-1: #fcfcfb; --page: #f9f9f7;
-    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
-    --gridline: #e1e0d9; --border: rgba(11,11,11,0.10);
-    --s1: #2a78d6; --critical: #d03b3b;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --surface-1: #1a1a19; --page: #0d0d0d;
-      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
-      --gridline: #2c2c2a; --border: rgba(255,255,255,0.10);
-      --s1: #3987e5; --critical: #e66767;
-    }
+    color-scheme: dark;
+    --page: #000000; --surface-1: #121317; --surface-2: #191b21;
+    --text-primary: #ffffff; --text-secondary: #b7bac5; --text-muted: #7a7e8c;
+    --gridline: #23252b; --border: rgba(255,255,255,0.09);
+    --accent: #3b82f6; --accent-hover: #2f6fe0; --accent-glow: rgba(59,130,246,0.35);
+    --critical: #e66767;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--page); color: var(--text-primary); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(900px circle at 50% -15%, rgba(59,130,246,0.12), transparent 55%), var(--page);
+    color: var(--text-primary); font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
   .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface-1); }
   .topbar strong { font-size: 15px; }
   .topbar nav { display: flex; gap: 14px; margin-left: 20px; }
   .topbar nav a { color: var(--text-secondary); text-decoration: none; font-size: 13px; }
-  .topbar nav a.active { color: var(--text-primary); font-weight: 600; }
+  .topbar nav a.active { color: var(--accent); font-weight: 600; }
   .who { font-size: 12px; color: var(--text-secondary); }
-  #signOut { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  #signOut { border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  #signOut:hover { border-color: var(--accent); }
 
   .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
@@ -41,23 +38,29 @@
   td { padding: 5px 6px; }
   td input {
     width: 100%; padding: 7px 8px; border-radius: 7px; border: 1px solid var(--border);
-    background: var(--surface-1); color: var(--text-primary); font-size: 13px;
+    background: var(--surface-2); color: var(--text-primary); font-size: 13px;
+    transition: border-color .15s, box-shadow .15s;
   }
+  td input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
   td.limitCol { width: 130px; }
   .rmBtn {
     background: none; border: none; color: var(--critical); cursor: pointer; font-size: 15px; padding: 4px 6px;
   }
 
   .btnRow { display: flex; gap: 8px; margin-top: 14px; }
-  #addRowBtn {
+  #addRowBtn, #addRecBtn {
     padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface-1); color: var(--text-primary); font-size: 13px; cursor: pointer;
+    background: var(--surface-2); color: var(--text-primary); font-size: 13px; cursor: pointer;
+    transition: border-color .15s;
   }
-  #saveBtn {
+  #addRowBtn:hover, #addRecBtn:hover { border-color: var(--accent); }
+  #saveBtn, #saveRecBtn {
     padding: 8px 14px; border-radius: 8px; border: none;
-    background: var(--s1); color: white; font-size: 13px; cursor: pointer;
+    background: var(--accent); color: white; font-size: 13px; cursor: pointer;
+    box-shadow: 0 4px 16px var(--accent-glow); transition: background .15s;
   }
-  #settingsStatus { font-size: 12px; color: var(--text-secondary); margin-top: 10px; min-height: 16px; }
+  #saveBtn:hover, #saveRecBtn:hover { background: var(--accent-hover); }
+  #settingsStatus, #recStatus { font-size: 12px; color: var(--text-secondary); margin-top: 10px; min-height: 16px; }
   .empty { color: var(--text-muted); font-size: 13px; padding: 16px 0; text-align: center; }
 </style>
 </head>
