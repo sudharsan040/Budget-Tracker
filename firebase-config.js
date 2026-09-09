@@ -16,8 +16,14 @@ const firebaseConfig = {
 };
 
 // The OAuth Client ID from Google Cloud Console (Phase 0, step 11) — used
-// later (Phase 2) to request Drive/Sheets access separately from login.
-export const GOOGLE_OAUTH_CLIENT_ID = "PASTE_YOUR_CLIENT_ID_HERE.apps.googleusercontent.com";
+// to request Drive/Sheets access separately from login (see sheets-api.js).
+export const GOOGLE_OAUTH_CLIENT_ID = "971365240881-d468u42hc9u1a5s0abagc0lsuj2aos43.apps.googleusercontent.com";
+
+// Least-privilege scopes: drive.file only sees files this app itself
+// creates (not your whole Drive); spreadsheets lets it read/write those.
+export const GOOGLE_SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
+
+export const SPREADSHEET_NAME = "Budget Tracker Data";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

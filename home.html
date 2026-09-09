@@ -27,6 +27,14 @@
   #signOut { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
   .wrap { max-width: 640px; margin: 40px auto; padding: 0 16px; text-align: center; }
   .placeholder { border: 1px dashed var(--border); border-radius: 12px; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+  .connectBox { border: 1px solid var(--border); border-radius: 12px; padding: 28px 20px; background: var(--surface-1); }
+  .connectBox p { color: var(--text-secondary); font-size: 13px; margin: 6px 0 18px; }
+  #connectBtn, #openSheet {
+    display: inline-block; padding: 10px 18px; border-radius: 8px; border: none;
+    background: var(--s1); color: white; font-size: 14px; cursor: pointer; text-decoration: none;
+  }
+  #connectStatus { font-size: 13px; color: var(--text-secondary); margin-top: 12px; min-height: 18px; }
+  .ok { color: var(--s1); }
 </style>
 </head>
 <body>
@@ -38,21 +46,63 @@
     </div>
   </div>
   <div class="wrap">
-    <div class="placeholder">
-      You're signed in. Real stats, budgets, and the expense form land here in Phase 2–4.
+    <div class="connectBox" id="connectBox">
+      <div id="preConnect">
+        <p>Connect your Google account to create your private spending sheet — you only need to do this once.</p>
+        <button id="connectBtn">Connect Google Sheets</button>
+      </div>
+      <div id="postConnect" style="display:none">
+        <p>You're all set — your data lives in your own Google Sheet.</p>
+        <a id="openSheet" target="_blank" rel="noopener">Open my sheet</a>
+      </div>
+      <div id="connectStatus"></div>
+    </div>
+    <div class="placeholder" style="margin-top:16px">
+      Real stats, budgets, and the in-app expense form land here in Phase 3–5.
     </div>
   </div>
 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script type="module">
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth } from "./firebase-config.js";
+import { getAccessToken, ensureSpreadsheet, spreadsheetUrl } from "./sheets-api.js";
 
-onAuthStateChanged(auth, (user) => {
+const statusEl = document.getElementById('connectStatus');
+const preConnect = document.getElementById('preConnect');
+const postConnect = document.getElementById('postConnect');
+let currentUid = null;
+
+onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = 'index.html'; return; }
   document.getElementById('who').textContent = user.email || user.displayName || '';
+  currentUid = user.uid;
+
+  const cached = localStorage.getItem('bt_spreadsheetId_' + user.uid);
+  if (cached) showConnected(cached);
 });
 
 document.getElementById('signOut').addEventListener('click', () => signOut(auth));
+
+document.getElementById('connectBtn').addEventListener('click', async () => {
+  statusEl.textContent = 'Opening Google’s permission screen…';
+  statusEl.className = '';
+  try {
+    const token = await getAccessToken();
+    statusEl.textContent = 'Setting up your spreadsheet…';
+    const id = await ensureSpreadsheet(token, currentUid);
+    showConnected(id);
+    statusEl.textContent = '';
+  } catch (e) {
+    statusEl.textContent = e.message || 'Something went wrong connecting Google Sheets.';
+  }
+});
+
+function showConnected(spreadsheetId) {
+  preConnect.style.display = 'none';
+  postConnect.style.display = 'block';
+  document.getElementById('openSheet').href = spreadsheetUrl(spreadsheetId);
+}
 </script>
 </body>
 </html>
