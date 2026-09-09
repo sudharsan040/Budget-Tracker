@@ -35,13 +35,15 @@ async function loadAll() {
   ]);
 
   allRows = expenseRows
-    .filter(r => r[0])
-    .map(r => ({
-      dateObj: new Date(r[0]),
-      amount: Number(r[1]) || 0,
-      category: r[2] || 'Uncategorized',
-      tag: r[3] || '',
-      source: r[4] || '',
+    .map((r, i) => ({ r, rowNumber: i + 2 })) // Expenses!A2 is row 2
+    .filter(x => x.r[0])
+    .map(x => ({
+      rowNumber: x.rowNumber,
+      dateObj: new Date(x.r[0]),
+      amount: Number(x.r[1]) || 0,
+      category: x.r[2] || 'Uncategorized',
+      tag: x.r[3] || '',
+      source: x.r[4] || '',
     }))
     .sort((a, b) => a.dateObj - b.dateObj);
 
@@ -271,13 +273,19 @@ function renderTransactions() {
   if (search) rows = rows.filter(r => r.tag.toLowerCase().includes(search) || r.category.toLowerCase().includes(search));
 
   const tbody = document.querySelector('#txTable tbody');
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No transactions match.</td></tr>'; return; }
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No transactions match.</td></tr>'; return; }
   tbody.innerHTML = rows.slice(0, 300).map(r => `
     <tr>
       <td>${r.dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
       <td><span class="dot" style="background:${colorFor(r.category)}"></span>${r.category}</td>
       <td>${r.tag}</td>
       <td class="amount">${fmt(r.amount)}</td>
+      <td class="rowActions">
+        <button class="editBtn" title="Edit" data-row="${r.rowNumber}"
+          data-date="${r.dateObj.toISOString().slice(0, 10)}" data-amount="${r.amount}"
+          data-category="${encodeURIComponent(r.category)}" data-tag="${encodeURIComponent(r.tag)}">✎</button>
+        <button class="delBtn" title="Delete" data-row="${r.rowNumber}">✕</button>
+      </td>
     </tr>`).join('');
 }
 

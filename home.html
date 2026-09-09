@@ -107,6 +107,11 @@
   }
   #addSaveBtn { padding: 9px 16px; border-radius: 8px; border: none; background: var(--s1); color: white; font-size: 14px; cursor: pointer; }
   .add-status { font-size: 12px; margin-top: 8px; min-height: 16px; }
+  .rowActions { white-space: nowrap; text-align: right; }
+  .rowActions button { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 5px; color: var(--text-secondary); }
+  .rowActions .delBtn { color: var(--up); }
+  #cancelEditBtn { background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 9px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; margin-left: 8px; }
+  #editingNote { font-size: 12px; color: var(--s1); margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -144,6 +149,7 @@
 
       <div class="card" id="addCard">
         <h2>Add expense</h2>
+        <div id="editingNote" style="display:none">Editing an existing expense.</div>
         <div class="add-grid">
           <div><label>Amount</label><input id="addAmount" type="number" step="0.01" placeholder="0.00"></div>
           <div><label>Category</label><select id="addCategory"></select></div>
@@ -151,6 +157,7 @@
           <div><label>Tag / note</label><input id="addTag" type="text" placeholder="optional"></div>
         </div>
         <button id="addSaveBtn">Save expense</button>
+        <button id="cancelEditBtn" style="display:none">Cancel edit</button>
         <div id="addStatus" class="add-status"></div>
       </div>
 
@@ -203,7 +210,7 @@
         </div>
         <div class="table-scroll">
           <table id="txTable">
-            <thead><tr><th>Date</th><th>Category</th><th>Tag</th><th style="text-align:right">Amount</th></tr></thead>
+            <thead><tr><th>Date</th><th>Category</th><th>Tag</th><th style="text-align:right">Amount</th><th></th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -215,7 +222,7 @@
 <script type="module">
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth } from "./firebase-config.js";
-import { getAccessToken, ensureSpreadsheet, spreadsheetUrl, appendExpense, clearAccessTokenCache } from "./sheets-api.js";
+import { getAccessToken, ensureSpreadsheet, spreadsheetUrl, appendExpense, updateExpenseRow, deleteExpenseRow, clearAccessTokenCache } from "./sheets-api.js";
 import { initDashboard, refreshDashboard, getCategories } from "./dashboard.js";
 
 let currentUid = null;
@@ -285,6 +292,33 @@ function populateAddCategory() {
   if (cats.includes(current)) sel.value = current;
 }
 
+let editingRow = null;
+
+function startEdit({ row, date, amount, category, tag }) {
+  editingRow = row;
+  document.getElementById('addAmount').value = amount;
+  document.getElementById('addDate').value = date;
+  document.getElementById('addTag').value = tag;
+  populateAddCategory();
+  document.getElementById('addCategory').value = category;
+  document.getElementById('addSaveBtn').textContent = 'Update expense';
+  document.getElementById('cancelEditBtn').style.display = 'inline-block';
+  document.getElementById('editingNote').style.display = 'block';
+  document.getElementById('addCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function stopEdit() {
+  editingRow = null;
+  document.getElementById('addAmount').value = '';
+  document.getElementById('addTag').value = '';
+  document.getElementById('addDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('addSaveBtn').textContent = 'Save expense';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('editingNote').style.display = 'none';
+}
+
+document.getElementById('cancelEditBtn').addEventListener('click', stopEdit);
+
 document.getElementById('addSaveBtn').addEventListener('click', async () => {
   const statusEl = document.getElementById('addStatus');
   const amount = parseFloat(document.getElementById('addAmount').value);
@@ -299,14 +333,49 @@ document.getElementById('addSaveBtn').addEventListener('click', async () => {
   try {
     currentToken = await getAccessToken({ interactive: false });
     const isoDate = dateStr ? new Date(dateStr + 'T12:00:00').toISOString() : new Date().toISOString();
-    await appendExpense(currentToken, currentSheetId, { date: isoDate, amount, category, tag, source: 'web-app' });
-    document.getElementById('addAmount').value = '';
-    document.getElementById('addTag').value = '';
-    statusEl.textContent = 'Saved ✓';
+    if (editingRow) {
+      await updateExpenseRow(currentToken, currentSheetId, editingRow, { date: isoDate, amount, category, tag });
+      statusEl.textContent = 'Updated ✓';
+      stopEdit();
+    } else {
+      await appendExpense(currentToken, currentSheetId, { date: isoDate, amount, category, tag, source: 'web-app' });
+      document.getElementById('addAmount').value = '';
+      document.getElementById('addTag').value = '';
+      statusEl.textContent = 'Saved ✓';
+    }
     await refreshDashboard();
+    populateAddCategory();
     setTimeout(() => { statusEl.textContent = ''; }, 1500);
   } catch (e) {
     statusEl.textContent = e.message || 'Could not save — try again.';
+  }
+});
+
+document.querySelector('#txTable tbody').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('.editBtn');
+  const delBtn = e.target.closest('.delBtn');
+  const statusEl = document.getElementById('dashStatus');
+
+  if (editBtn) {
+    startEdit({
+      row: Number(editBtn.dataset.row),
+      date: editBtn.dataset.date,
+      amount: editBtn.dataset.amount,
+      category: decodeURIComponent(editBtn.dataset.category),
+      tag: decodeURIComponent(editBtn.dataset.tag),
+    });
+  } else if (delBtn) {
+    if (!confirm('Delete this expense? This can\'t be undone.')) return;
+    statusEl.textContent = 'Deleting…';
+    try {
+      currentToken = await getAccessToken({ interactive: false });
+      await deleteExpenseRow(currentToken, currentSheetId, Number(delBtn.dataset.row));
+      if (editingRow === Number(delBtn.dataset.row)) stopEdit();
+      await refreshDashboard();
+      statusEl.textContent = '';
+    } catch (e2) {
+      statusEl.textContent = 'Could not delete — try again.';
+    }
   }
 });
 

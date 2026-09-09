@@ -130,6 +130,41 @@ export function clearAccessTokenCache() {
   try { sessionStorage.removeItem(TOKEN_CACHE_KEY); } catch {}
 }
 
+const sheetGidCache = {}; // spreadsheetId -> { title: gid }
+
+async function getSheetGid(token, spreadsheetId, title) {
+  if (sheetGidCache[spreadsheetId] && sheetGidCache[spreadsheetId][title] != null) {
+    return sheetGidCache[spreadsheetId][title];
+  }
+  const meta = await sheetsApi(`/${spreadsheetId}?fields=sheets.properties`, {}, token);
+  const map = {};
+  meta.sheets.forEach(s => { map[s.properties.title] = s.properties.sheetId; });
+  sheetGidCache[spreadsheetId] = map;
+  return map[title];
+}
+
+// Updates one existing expense row in place (date/amount/category/tag) —
+// leaves the Source column untouched.
+export async function updateExpenseRow(token, spreadsheetId, rowNumber, { date, amount, category, tag }) {
+  await sheetsApi(
+    `/${spreadsheetId}/values/Expenses!A${rowNumber}:D${rowNumber}?valueInputOption=RAW`,
+    { method: 'PUT', body: JSON.stringify({ values: [[date, amount, category, tag || '']] }) },
+    token
+  );
+}
+
+export async function deleteExpenseRow(token, spreadsheetId, rowNumber) {
+  const gid = await getSheetGid(token, spreadsheetId, 'Expenses');
+  await sheetsApi(`/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({
+      requests: [{
+        deleteDimension: { range: { sheetId: gid, dimension: 'ROWS', startIndex: rowNumber - 1, endIndex: rowNumber } },
+      }],
+    }),
+  }, token);
+}
+
 export function spreadsheetUrl(id) {
   return `https://docs.google.com/spreadsheets/d/${id}/edit`;
 }

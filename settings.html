@@ -135,7 +135,11 @@ function addRow(row = { category: '', limit: '' }) {
     <td class="limitCol"><input type="number" step="0.01" class="catLimit" value="${escapeAttr(row.limit)}" placeholder="no limit"></td>
     <td><button class="rmBtn" title="Remove">✕</button></td>
   `;
-  tr.querySelector('.rmBtn').addEventListener('click', () => tr.remove());
+  tr.querySelector('.rmBtn').addEventListener('click', () => {
+    const name = tr.querySelector('.catName').value.trim();
+    if (name && !confirm(`Remove "${name}"? Existing transactions keep this label but it won't be selectable for new ones.`)) return;
+    tr.remove();
+  });
   catBody.appendChild(tr);
 }
 
