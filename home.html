@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Budget Tracker — Home</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb; --page: #f9f9f7;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --border: rgba(11,11,11,0.10); --s1: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --page: #0d0d0d;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --border: rgba(255,255,255,0.10); --s1: #3987e5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text-primary); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface-1); }
+  .topbar strong { font-size: 15px; }
+  .topbar .who { font-size: 12px; color: var(--text-secondary); }
+  #signOut { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  .wrap { max-width: 640px; margin: 40px auto; padding: 0 16px; text-align: center; }
+  .placeholder { border: 1px dashed var(--border); border-radius: 12px; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>Budget Tracker</strong>
+    <div style="display:flex; align-items:center; gap:12px">
+      <span class="who" id="who"></span>
+      <button id="signOut">Sign out</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="placeholder">
+      You're signed in. Real stats, budgets, and the expense form land here in Phase 2–4.
+    </div>
+  </div>
+
+<script type="module">
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { auth } from "./firebase-config.js";
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  document.getElementById('who').textContent = user.email || user.displayName || '';
+});
+
+document.getElementById('signOut').addEventListener('click', () => signOut(auth));
+</script>
+</body>
+</html>
