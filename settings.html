@@ -95,7 +95,7 @@
 <script type="module">
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth } from "./firebase-config.js";
-import { getAccessToken, readCategories, writeCategories } from "./sheets-api.js";
+import { getAccessToken, readCategories, writeCategories, clearAccessTokenCache } from "./sheets-api.js";
 
 const catBody = document.getElementById('catBody');
 const statusEl = document.getElementById('settingsStatus');
@@ -121,7 +121,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-document.getElementById('signOut').addEventListener('click', () => signOut(auth));
+document.getElementById('signOut').addEventListener('click', () => { clearAccessTokenCache(); signOut(auth); });
 
 function renderRows(rows) {
   catBody.innerHTML = '';

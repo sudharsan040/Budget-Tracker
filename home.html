@@ -215,7 +215,7 @@
 <script type="module">
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth } from "./firebase-config.js";
-import { getAccessToken, ensureSpreadsheet, spreadsheetUrl, appendExpense } from "./sheets-api.js";
+import { getAccessToken, ensureSpreadsheet, spreadsheetUrl, appendExpense, clearAccessTokenCache } from "./sheets-api.js";
 import { initDashboard, refreshDashboard, getCategories } from "./dashboard.js";
 
 let currentUid = null;
@@ -246,7 +246,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-document.getElementById('signOut').addEventListener('click', () => signOut(auth));
+document.getElementById('signOut').addEventListener('click', () => { clearAccessTokenCache(); signOut(auth); });
 
 document.getElementById('connectBtn').addEventListener('click', async () => {
   const statusEl = document.getElementById('dashStatus');

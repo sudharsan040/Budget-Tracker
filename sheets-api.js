@@ -4,8 +4,25 @@
 
 import { GOOGLE_OAUTH_CLIENT_ID, GOOGLE_SCOPES, SPREADSHEET_NAME, DEFAULT_CATEGORIES } from './firebase-config.js';
 
+const TOKEN_CACHE_KEY = 'bt_gtoken';
+
+// sessionStorage survives a page refresh (but clears when the tab closes),
+// so reloading the app doesn't need to re-ask Google for a token every time —
+// that silent re-ask is what was causing the popup flash on every refresh.
+function loadCachedToken() {
+  try {
+    const raw = sessionStorage.getItem(TOKEN_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed.expiresAt > Date.now() + 30000 ? parsed : null;
+  } catch { return null; }
+}
+function saveCachedToken(tok) {
+  try { sessionStorage.setItem(TOKEN_CACHE_KEY, JSON.stringify(tok)); } catch {}
+}
+
 let tokenClient = null;
-let currentToken = null; // { access_token, expiresAt }
+let currentToken = loadCachedToken(); // { access_token, expiresAt }
 
 function ensureTokenClient() {
   if (tokenClient) return tokenClient;
@@ -34,6 +51,7 @@ export function getAccessToken({ interactive = true } = {}) {
         return;
       }
       currentToken = { access_token: resp.access_token, expiresAt: Date.now() + (resp.expires_in * 1000) };
+      saveCachedToken(currentToken);
       resolve(resp.access_token);
     };
     // Try silent first; if that fails to produce a token (no prior consent),
@@ -105,6 +123,11 @@ export async function ensureSpreadsheet(token, uid) {
 
   localStorage.setItem(cacheKey(uid), id);
   return id;
+}
+
+export function clearAccessTokenCache() {
+  currentToken = null;
+  try { sessionStorage.removeItem(TOKEN_CACHE_KEY); } catch {}
 }
 
 export function spreadsheetUrl(id) {
