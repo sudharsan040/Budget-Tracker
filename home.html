@@ -125,7 +125,7 @@
   </div>
 
   <div class="wrap">
-    <div class="connectBox" id="connectBox">
+    <div class="connectBox" id="connectBox" style="display:none">
       <p>Connect your Google account to create your private spending sheet — you only need to do this once.</p>
       <button id="connectBtn">Connect Google Sheets</button>
     </div>
@@ -133,7 +133,7 @@
       Connected · <a id="openSheet" target="_blank" rel="noopener">Open my sheet</a>
     </div>
 
-    <div id="dashStatus"></div>
+    <div id="dashStatus">Loading…</div>
 
     <div id="dashboard" style="display:none">
       <div class="toolbar">
@@ -243,6 +243,9 @@ onAuthStateChanged(auth, async (user) => {
       document.getElementById('dashStatus').textContent = 'Click "Connect Google Sheets" to load your data.';
       document.getElementById('connectBox').style.display = 'block';
     }
+  } else {
+    document.getElementById('dashStatus').textContent = '';
+    document.getElementById('connectBox').style.display = 'block';
   }
 });
 
